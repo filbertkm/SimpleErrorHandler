@@ -1,12 +1,12 @@
 SimpleErrorHandler
-------------------
+==================
 
 SimpleErrorHandler provides an error handler that outputs error messages.
 
 HHVM has no default error handler. This can be used with hhvm to provide a default.
 
 Usage
-=====
+-----
 
 Include something like the following in an auto prepend file:
 
