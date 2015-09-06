@@ -2,12 +2,24 @@
 
 class SimpleErrorHandler {
 
-	public static function error_handler( $errorNumber, $message, $errfile, $errline ) {
+	/**
+	 * @param int $errorNumber
+	 * @param string $errorMessage
+	 * @param string $filename
+	 * @param int $lineNumber
+	 */
+	public static function error_handler( $errorNumber, $errorMessage, $filename, $lineNumber ) {
 		$errorHandler = new self();
-		$errorHandler->handleError( $errorNumber, $message, $errfile, $errline );
+		$errorHandler->handleError( $errorNumber, $errorMessage, $filename, $lineNumber );
 	}
 
-	public function handleError( $errorNumber, $message, $errfile, $errline ) {
+	/**
+	 * @param int $errorNumber
+	 * @param string $message
+	 * @param string $fileName
+	 * @param int $lineNumber
+	 */
+	public function handleError( $errorNumber, $errorMessage, $filename, $lineNumber ) {
 		if ( 0 === error_reporting() || !$this->doReportLevel( $errorNumber ) ) {
 			return false;
 		}
@@ -30,40 +42,57 @@ class SimpleErrorHandler {
 		}
 
 		if ( $errorLevel !== false ) {
-			$this->reportError( $errorLevel, $message, $errfile, $errline );
+			$this->reportError( $errorLevel, $errorMessage, $filename, $lineNumber );
 		}
 
 		return true;
 	}
 
-    private function doReportLevel( $errorNumber ) {
+	private function doReportLevel( $errorNumber ) {
 		return ( error_reporting() & $errorNumber ) === $errorNumber;
 	}
 
-	private function reportError( $errorLevel, $message, $errfile, $errline ) {
-		$error[] = $errorLevel . ': ' . $message . ' in ' . $errfile . ' on line ' . $errline;
-		$backtrace = debug_backtrace();
+	private function reportError( $errorLevel, $message, $filename, $lineNumber ) {
+		$errorLines = array_merge(
+			array(
+				 $errorLevel . ': ' . $message . ' in ' . $filename . ' on line ' . $lineNumber
+			),
+			$this->formatBacktrace( debug_backtrace() )
+		);
 
-		foreach( $backtrace as $key => $line ) {
-			$errorLine =  '#' . $key . ': ';
-
-			if ( array_key_exists( 'file', $line ) ) {
-				$errorLine .= $line['file'];
-			}
-
-			if ( array_key_exists( 'line', $line ) ) {
-				$errorLine .= ' (' .  $line['line'] . '): ';
-			}
-
-			$errorLine .= $line['function'];
-			$error[] = $errorLine;
-		}
+		$error = implode( "\n", $errorLines );
 
 		if ( PHP_SAPI === 'cli' ) {
-			echo implode( "\n", $error ) . "\n";
+			echo "$error\n";
 		} else {
-			echo "<div style='background: #eee; padding: 1em'>" . implode ( "<br/>", $error ) . '</div>';
+			echo "<div style='background: #eee; padding: 1em'>$error</div>";
 		}
+	}
+
+	private function formatBacktrace( array $backtraceLines ) {
+		$errorLines = array();
+
+		foreach( $backtraceLines as $key => $line ) {
+			$errorLines[] = $this->formatBacktraceLine( $key, $line );
+		}
+
+		return $errorLines;
+	}
+
+	private function formatBacktraceLine( $key, $line ) {
+		$errorLine =  '#' . $key . ': ';
+
+		if ( array_key_exists( 'file', $line ) ) {
+			$errorLine .= $line['file'];
+		}
+
+		if ( array_key_exists( 'line', $line ) ) {
+			$errorLine .= ' (' .  $line['line'] . '): ';
+		}
+
+		$errorLine .= $line['function'];
+
+		return $errorLine;
 	}
 
 	public static function fatal_handler() {
